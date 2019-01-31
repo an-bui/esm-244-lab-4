@@ -1,0 +1,34 @@
+---
+title: "Lab 4"
+author: "An Bui"
+date: "1/31/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### 0. Attach packages. 
+```{r set up, include = FALSE}
+library(tidyverse)
+library(Ecdat)
+library(plm)
+library(lmtest)
+library(car)
+```
+
+#### 1. Non-linear least squares for logistic growth of bacteria
+```{r load data, include = FALSE}
+cellgrowth <- read_csv("CellGrowth.csv")
+```
+
+
+
+
+
+
+
+
+
+
