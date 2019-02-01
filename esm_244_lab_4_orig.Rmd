@@ -19,16 +19,100 @@ library(car)
 ```
 
 #### 1. Non-linear least squares for logistic growth of bacteria
-```{r load data, include = FALSE}
+```{r bacteria data, include = FALSE}
+#### read in file ####
 cellgrowth <- read_csv("CellGrowth.csv")
+
+#### visualize ####
+cellgrowth_plot <- ggplot(cellgrowth, aes(x = Time, y = CellCount)) +
+  geom_point()
+cellgrowth_plot
+# first 4 points look like exponential growth is dominant
 ```
 
+Find estimates for logistic growth:
+$$
+N_t = \frac{A}{1 + Be^{-rt}}
+$$
+Estimate carrying capacity ~ 3700. If $N_0$ is 2000, what is B?
+```{r find B}
+BEstimate <- (3700 - 2000)/2000
+BEstimate
+```
+
+Now, estimate $r$.
+```{r estimate r}
+#### wrangle ####
+lag_phase <- cellgrowth %>% 
+  filter(Time < 5)
+
+#### plot ln cell growth vs time ####
+lag_plot <- ggplot(lag_phase, aes(x = Time, y = log(CellCount))) +
+  geom_point()
+lag_plot
+# linearly positive relationship between ln(cell count) and time
+# slope of line is exponential rate constant r
+
+#### find r ####
+lag_phase_lm <- lm(log(CellCount) ~ Time, data = lag_phase)
+lag_phase_lm
+```
+$r$ is about 0.1035.  
+
+Remember that you have initial estimates for all variables:
+
+* $r$ = 0.1035
+* $K$ = 2700
+* $N_0$ = 2000
+
+Now, find A, B, and r using Gauss-Newton method for iterative convergence (nonlinear least squares).  
+
+```{r use NLS function}
+#### function ####
+# use non-linear least squares (default is Gauss-Newton)
+# enter variables even though R doesn't actually know what they are
+cell_fit <- nls(CellCount ~ A/(1 + B*exp(-r*Time)),
+                # give some starting value for each variable
+                # which you already calculated up top
+                start = list(A = 3700, B = 0.85, r = 0.1035),
+                data = cellgrowth,
+                # can see trace of iterations that R went through to get the convergence values
+                trace = TRUE
+                )
+cell_fit
+# gives trace pack of all the iterations
+# values left of colon: square residual values
+# at first level, initial estimates
+# adjusts values at each level until it has reached convergence on parameter values
 
 
+#### plot model on top of data ####
+# set coefficients
+A <- coef(cell_fit)[1]
+B <- coef(cell_fit)[2]
+r <- coef(cell_fit)[3]
 
+# create new sequence of times
+# sequence of range 0-20 of equal observations of length = 100 (100 total observations)
+time_seq <- seq(0, 20, length = 100)
 
+# plug into model
+cell_pred <- A/(1 + B*exp(-r*time_seq))
 
+# bind with time_seq data
+pred_df <- data.frame(time_seq, cell_pred)
 
+# create a graph with original data and model predictions
+model_plot <- ggplot(cellgrowth, aes(x = Time, y = CellCount)) +
+  geom_point(color = "blue", size = 3) +
+  # add layer with model
+  geom_line(data = pred_df, aes(x = time_seq, 
+                                y = cell_pred),
+            color = "orange",
+            size = 1) 
+model_plot
+```
 
+You can give model equation any parameters in any structure you want and give it starting values, and it will go through the iterative process to find convergent parameters.
 
 
