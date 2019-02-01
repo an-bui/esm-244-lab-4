@@ -115,4 +115,90 @@ model_plot
 
 You can give model equation any parameters in any structure you want and give it starting values, and it will go through the iterative process to find convergent parameters.
 
+#### 4. Panel Regression
+Focus on:
+
+* state (entity)
+* year (time)
+
+These two things together make this **panel data**. Also, focus on:  
+
+* packpc (dependent variable)
+* avgprs (predictor variable)
+
+```{r cigarette data}
+#### wrangle ####
+cigs_panel <- Cigarette %>% 
+  select(state, year, packpc, avgprs)
+
+#### visualize ####
+cigs_plot <- ggplot(cigs_panel, aes(x = avgprs, 
+                                    y = packpc, 
+                                    group = state)) +
+  geom_point(aes(color = state)) +
+  # add trendlines
+  geom_smooth(method = "lm", aes(color = state), se = FALSE, size = 0.2)
+cigs_plot
+# generally, looks like as average price is affecting purchases in a similar way when comparing between states
+
+#### what's happening over years? ####
+cigs_year <- ggplot(cigs_panel, aes(x = year, 
+                                    y = packpc, 
+                                    group = state)) +
+  geom_point(aes(color = state)) +
+  geom_smooth(method = "lm", aes(color = state), se = FALSE, size = 0.2)
+cigs_year
+```
+
+Do panel regression first only considering entity fixed effects, then add time fixed effects.
+
+```{r entity fixed effects}
+cigs_model <- plm(packpc ~ avgprs,
+                  data = cigs_panel,
+                  # give entity and time variables
+                  index = c("state", "year"),
+                  # do an entity fixed effect model
+                  model = "within")
+cigs_model
+# coefficient is -0.32545
+
+# robust standard error
+coeftest(cigs_model, vcov. = vcovHC(cigs_model, type = "HC1"))
+# gives statistical information for the robust standard error for estimates
+# more conservative estimate of this relationship associated with standard error
+```
+
+Now, add time fixed effects.
+```{r time fixed effects}
+et_cigs_model <- plm(packpc ~ avgprs,
+                     data = cigs_panel,
+                     index = c("state", "year"),
+                     # entity fixed effect
+                     model = "within",
+                     # time fixed effect
+                     effect = "twoways")
+et_cigs_model
+# coefficient is -0.38872
+
+#### has including a time fixed effect actually improved my model? ####
+# use pFtest on both models, give more complete model first
+pFtest(et_cigs_model, cigs_model)
+# null hypothesis: model is not improved by adding time fixed effects
+# reject null hypothesis because p-value
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
